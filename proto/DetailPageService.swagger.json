@@ -1,0 +1,163 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "DetailPageService.proto",
+    "version": "1.0.0"
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/detail/getDetailInfo": {
+      "post": {
+        "operationId": "GetDetailInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/DetailPageServiceDetailTileInfo"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DetailPageServiceTileInfoRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DetailPageService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "DetailPageServiceButton": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "packageName": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        }
+      }
+    },
+    "DetailPageServiceContentTile": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "mediaUrl": {
+          "type": "string"
+        },
+        "tileType": {
+          "$ref": "#/definitions/DetailPageServiceTileType"
+        },
+        "poster": {
+          "type": "string"
+        },
+        "portrait": {
+          "type": "string"
+        },
+        "isDetailPage": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "packageName": {
+          "type": "string"
+        },
+        "contentId": {
+          "type": "string"
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "realeaseDate": {
+          "type": "string"
+        }
+      }
+    },
+    "DetailPageServiceDetailTileInfo": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "synopsis": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "button": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DetailPageServiceButton"
+          }
+        },
+        "contentTile": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DetailPageServiceContentTile"
+          }
+        },
+        "backDrop": {
+          "type": "string"
+        },
+        "poster": {
+          "type": "string"
+        },
+        "portrait": {
+          "type": "string"
+        },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DetailPageServiceTileInfoRequest": {
+      "type": "object",
+      "properties": {
+        "tileId": {
+          "type": "string"
+        }
+      }
+    },
+    "DetailPageServiceTileType": {
+      "type": "string",
+      "enum": [
+        "ImageTile",
+        "VideoTile",
+        "FeatureTile",
+        "AdvertiseTile",
+        "CarouselTile"
+      ],
+      "default": "ImageTile",
+      "title": "Row Request"
+    }
+  }
+}

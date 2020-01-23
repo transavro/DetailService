@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package DetailPageService;
+
+import   "google/api/annotations.proto";
+
+
+service DetailPageService{
+    rpc GetDetailInfo(TileInfoRequest) returns (DetailTileInfo){
+        option (google.api.http) = {
+                post:"/detail/getDetailInfo"
+                body: "*"
+        };
+    }
+}
+
+
+message TileInfoRequest{
+    string tileId = 1;
+}
+
+message DetailTileInfo{
+    string title = 1;
+    string synopsis = 2;
+    map<string, string> metadata = 3;
+    repeated Button button = 4;
+    repeated ContentTile contentTile = 5;
+    string backDrop = 6;
+    string poster = 7;
+    string portrait = 8;
+    repeated string target = 9;
+}
+
+message Button {
+    string title = 1;
+    string icon = 2;
+    string packageName = 3;
+    string action = 4;
+}
+
+
+// Row Request
+enum TileType {
+    ImageTile = 0;
+    VideoTile = 1;
+    FeatureTile = 2;
+    AdvertiseTile = 3;
+    CarouselTile = 4;
+}
+
+message ContentTile{
+    string title = 1;
+    string mediaUrl = 2;
+    TileType tileType = 3;
+    string poster = 4;
+    string portrait = 5;
+    bool isDetailPage = 6;
+    string packageName = 7;
+    string contentId = 8;
+    repeated string target = 9;
+    string realeaseDate = 10;
+}
