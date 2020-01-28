@@ -1,9 +1,9 @@
 package apihandler
 
 import (
-	pb "github.com/transavro/DetialService/proto"
 	"context"
 	"fmt"
+	pb "github.com/transavro/DetialService/proto"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"math/rand"
@@ -109,11 +109,11 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 		metaSet["source"] = tile.Content.Source
 	}
 
-	if(len(tile.Metadata.Cast) > 0){
+	if len(tile.Metadata.Cast) > 0 {
 		metaSet["cast"] = strings.Join(tile.Metadata.Cast, ",")
 	}
 
-	if(len(tile.Metadata.Directors) > 0){
+	if len(tile.Metadata.Directors) > 0 {
 		metaSet["director"] = strings.Join(tile.Metadata.Directors, ",")
 	}
 
