@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "DetailPageService.proto",
-    "version": "1.0.0"
+    "version": "version not set"
   },
   "consumes": [
     "application/json"
@@ -136,6 +136,12 @@
           "items": {
             "type": "string"
           }
+        },
+        "package": {
+          "type": "string"
+        },
+        "appstoreUrl": {
+          "type": "string"
         }
       }
     },

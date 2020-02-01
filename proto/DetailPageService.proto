@@ -29,6 +29,8 @@ message DetailTileInfo{
     string poster = 7;
     string portrait = 8;
     repeated string target = 9;
+    string package = 10;
+    string appstoreUrl = 11;
 }
 
 message Button {

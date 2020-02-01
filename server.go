@@ -35,7 +35,8 @@ const (
 
 const (
 	defaultHost = "mongodb://nayan:tlwn722n@cluster0-shard-00-00-8aov2.mongodb.net:27017,cluster0-shard-00-01-8aov2.mongodb.net:27017,cluster0-shard-00-02-8aov2.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true&w=majority"
-	developmentMongoHost = "mongodb://dev-uni.cloudwalker.tv:6592"
+	//developmentMongoHost = "mongodb://dev-uni.cloudwalker.tv:6592"
+	developmentMongoHost = "mongodb://192.168.1.9:27017"
 	schedularMongoHost = "mongodb://localhost:27017"
 	schedularRedisHost = ":6379"
 	grpcPort = ":7767"
@@ -124,11 +125,13 @@ func startGRPCServer(address string, server apihandler.Server) error {
 	if err != nil {
 		return err
 	}
+	//
+	//serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(unaryInterceptor), grpc.StreamInterceptor(streamIntercept)}
+	//
+	//// attach the Ping service to the server
+	//grpcServer := grpc.NewServer(serverOptions...)
 
-	serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(unaryInterceptor), grpc.StreamInterceptor(streamIntercept)}
-
-	// attach the Ping service to the server
-	grpcServer := grpc.NewServer(serverOptions...)
+	grpcServer := grpc.NewServer()
 	// attach the Ping service to the server
 	pb.RegisterDetailPageServiceServer(grpcServer, &server)  // start the server
 	//log.Printf("starting HTTP/2 gRPC server on %s", address)
@@ -142,7 +145,8 @@ func startRESTServer(address, grpcAddress string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher))
+	//mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher))
+	mux := runtime.NewServeMux()
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}  // Register ping
 	err := pb.RegisterDetailPageServiceHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
@@ -200,3 +204,10 @@ func initializeProcess() apihandler.Server  {
 	return apihandler.Server{TileCollection:tileCollection}
 }
 
+func makingServiceConnection(tragetServicePort string) (*grpc.ClientConn, error){
+	conn , err := grpc.Dial(tragetServicePort, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %s", err)
+	}
+	return conn, err
+}

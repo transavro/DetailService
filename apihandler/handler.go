@@ -51,6 +51,7 @@ type Server struct {
 }
 
 func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest) (*pb.DetailTileInfo, error){
+
 	findFilter := bson.D{{"ref_id", tileInfo.TileId}}
 	findResult := s.TileCollection.FindOne(ctx, findFilter)
 
@@ -120,6 +121,9 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 	detailTileInfo.Metadata = metaSet
 	detailTileInfo.Synopsis = tile.Metadata.Synopsis
 	detailTileInfo.Target = tile.Content.Target
+	detailTileInfo.Package = tile.Content.Package
+	detailTileInfo.AppstoreUrl = fmt.Sprintf("market://details?id=%s",tile.Content.Package)
+
 
 	var buttons []*pb.Button
 	for _, v := range tile.Buttons {
