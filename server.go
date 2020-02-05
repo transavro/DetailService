@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/joho/godotenv"
 	pbAuth "github.com/transavro/AuthService/proto"
 	"github.com/transavro/DetialService/apihandler"
 	pb "github.com/transavro/DetialService/proto"
@@ -21,27 +22,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 )
 
-
-// private type for Context keys
-type contextKey int
-
-const (
-	clientIDKey contextKey = iota
-)
-
-const (
-	defaultHost = "mongodb://nayan:tlwn722n@cluster0-shard-00-00-8aov2.mongodb.net:27017,cluster0-shard-00-01-8aov2.mongodb.net:27017,cluster0-shard-00-02-8aov2.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true&w=majority"
-	//developmentMongoHost = "mongodb://dev-uni.cloudwalker.tv:6592"
-	developmentMongoHost = "mongodb://192.168.1.9:27017"
-	schedularMongoHost = "mongodb://localhost:27017"
-	schedularRedisHost = ":6379"
-	grpcPort = ":7767"
-	restPort = ":7768"
-)
+var mongoDbHost, redisPort, grpcPort, restPort  string
 
 type nullawareStrDecoder struct{}
 
@@ -125,13 +111,10 @@ func startGRPCServer(address string, server apihandler.Server) error {
 	if err != nil {
 		return err
 	}
-	//
-	//serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(unaryInterceptor), grpc.StreamInterceptor(streamIntercept)}
-	//
-	//// attach the Ping service to the server
-	//grpcServer := grpc.NewServer(serverOptions...)
 
-	grpcServer := grpc.NewServer()
+	serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(unaryInterceptor), grpc.StreamInterceptor(streamIntercept)}
+	// attach the Ping service to the server
+	grpcServer := grpc.NewServer(serverOptions...)
 	// attach the Ping service to the server
 	pb.RegisterDetailPageServiceServer(grpcServer, &server)  // start the server
 	//log.Printf("starting HTTP/2 gRPC server on %s", address)
@@ -173,10 +156,9 @@ func getMongoCollection(dbName, collectionName, mongoHost string )  *mongo.Colle
 	return mongoClient.Database(dbName).Collection(collectionName)
 }
 
+
 func main()  {
 	serverhandler := initializeProcess()
-
-
 
 	// fire the gRPC server in a goroutine
 	go func() {
@@ -198,8 +180,23 @@ func main()  {
 	select {}
 }
 
+
+func loadEnv(){
+	mongoDbHost = os.Getenv("MONGO_HOST")
+	redisPort = os.Getenv("REDIS_PORT")
+	grpcPort = os.Getenv("GRPC_PORT")
+	restPort = os.Getenv("REST_PORT")
+}
+
+
 func initializeProcess() apihandler.Server  {
-	tileCollection := getMongoCollection("optimus", "contents", developmentMongoHost)
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(err.Error())
+	}
+	loadEnv()
+
+	tileCollection := getMongoCollection("optimus", "contents", mongoDbHost)
 	return apihandler.Server{TileCollection:tileCollection}
 }
 
