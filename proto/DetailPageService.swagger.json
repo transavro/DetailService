@@ -48,52 +48,24 @@
         "icon": {
           "type": "string"
         },
-        "packageName": {
+        "package": {
           "type": "string"
         },
         "action": {
           "type": "string"
+        },
+        "buttonType": {
+          "$ref": "#/definitions/DetailPageServiceButtonType"
         }
       }
     },
-    "DetailPageServiceContentTile": {
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "string"
-        },
-        "mediaUrl": {
-          "type": "string"
-        },
-        "tileType": {
-          "$ref": "#/definitions/DetailPageServiceTileType"
-        },
-        "poster": {
-          "type": "string"
-        },
-        "portrait": {
-          "type": "string"
-        },
-        "isDetailPage": {
-          "type": "boolean",
-          "format": "boolean"
-        },
-        "packageName": {
-          "type": "string"
-        },
-        "contentId": {
-          "type": "string"
-        },
-        "target": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "realeaseDate": {
-          "type": "string"
-        }
-      }
+    "DetailPageServiceButtonType": {
+      "type": "string",
+      "enum": [
+        "LocalApi",
+        "RemotApi"
+      ],
+      "default": "LocalApi"
     },
     "DetailPageServiceDetailTileInfo": {
       "type": "object",
@@ -119,29 +91,26 @@
         "contentTile": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/DetailPageServiceContentTile"
+            "$ref": "#/definitions/SchedularServiceContent"
           }
         },
         "backDrop": {
-          "type": "string"
-        },
-        "poster": {
-          "type": "string"
-        },
-        "portrait": {
-          "type": "string"
-        },
-        "target": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "package": {
-          "type": "string"
+        "poster": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
-        "appstoreUrl": {
-          "type": "string"
+        "portrait": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -153,7 +122,61 @@
         }
       }
     },
-    "DetailPageServiceTileType": {
+    "SchedularServiceContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "poster": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "portrait": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "type": {
+          "$ref": "#/definitions/SchedularServiceTileType"
+        },
+        "isDetailPage": {
+          "type": "boolean",
+          "format": "boolean"
+        },
+        "contentId": {
+          "type": "string"
+        },
+        "play": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SchedularServicePlay"
+          }
+        },
+        "video": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "new schema"
+    },
+    "SchedularServicePlay": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      }
+    },
+    "SchedularServiceTileType": {
       "type": "string",
       "enum": [
         "ImageTile",
@@ -163,7 +186,7 @@
         "CarouselTile"
       ],
       "default": "ImageTile",
-      "title": "Row Request"
+      "title": "contentTile"
     }
   }
 }

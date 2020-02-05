@@ -145,8 +145,7 @@ func startRESTServer(address, grpcAddress string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	//mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher))
-	mux := runtime.NewServeMux()
+	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher), runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName:false, EnumsAsInts:true, EmitDefaults:true}))
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}  // Register ping
 	err := pb.RegisterDetailPageServiceHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
@@ -200,7 +199,7 @@ func main()  {
 }
 
 func initializeProcess() apihandler.Server  {
-	tileCollection := getMongoCollection("cwtx2devel", "tiles", developmentMongoHost)
+	tileCollection := getMongoCollection("optimus", "contents", developmentMongoHost)
 	return apihandler.Server{TileCollection:tileCollection}
 }
 
