@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-redis/redis"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/joho/godotenv"
 	pbAuth "github.com/transavro/AuthService/proto"
@@ -112,9 +113,10 @@ func startGRPCServer(address string, server apihandler.Server) error {
 		return err
 	}
 
-	serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(unaryInterceptor), grpc.StreamInterceptor(streamIntercept)}
+	//serverOptions := []grpc.ServerOption{grpc.UnaryInterceptor(unaryInterceptor), grpc.StreamInterceptor(streamIntercept)}
 	// attach the Ping service to the server
-	grpcServer := grpc.NewServer(serverOptions...)
+	//grpcServer := grpc.NewServer(serverOptions...)
+	grpcServer := grpc.NewServer()
 	// attach the Ping service to the server
 	pb.RegisterDetailPageServiceServer(grpcServer, &server)  // start the server
 	//log.Printf("starting HTTP/2 gRPC server on %s", address)
@@ -130,7 +132,9 @@ func startRESTServer(address, grpcAddress string) error {
 	defer cancel()
 	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher), runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName:false, EnumsAsInts:true, EmitDefaults:true}))
 
-	opts := []grpc.DialOption{grpc.WithInsecure()}  // Register ping
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+
+	// Register ping
 	err := pb.RegisterDetailPageServiceHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
 	if err != nil {
 		return fmt.Errorf("could not register service Ping: %s", err)
@@ -175,7 +179,6 @@ func main()  {
 			log.Fatalf("failed to start gRPC server: %s", err)
 		}
 	}()
-
 	// infinite loop
 	select {}
 }
@@ -196,8 +199,25 @@ func initializeProcess() apihandler.Server  {
 	}
 	loadEnv()
 
-	tileCollection := getMongoCollection("optimus", "contents", mongoDbHost)
-	return apihandler.Server{TileCollection:tileCollection}
+	tileCollection := getMongoCollection("transavro", "optimus_content", mongoDbHost)
+	return apihandler.Server{
+		TileCollection:tileCollection,
+		RedisClient:getRedisClient(redisPort),
+	}
+}
+
+
+func getRedisClient(redisHost string) *redis.Client {
+	client := redis.NewClient(&redis.Options{
+		Addr:     redisHost,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	_, err := client.Ping().Result()
+	if err != nil {
+		log.Fatalf("Could not connect to redis %v", err)
+	}
+	return client
 }
 
 func makingServiceConnection(tragetServicePort string) (*grpc.ClientConn, error){
