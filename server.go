@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/go-redis/redis"
 	"github.com/transavro/DetialService/apihandler"
 	pb "github.com/transavro/DetialService/proto"
 	"context"
@@ -33,7 +34,8 @@ const (
 
 const (
 	defaultHost = "mongodb://nayan:tlwn722n@cluster0-shard-00-00-8aov2.mongodb.net:27017,cluster0-shard-00-01-8aov2.mongodb.net:27017,cluster0-shard-00-02-8aov2.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true&w=majority"
-	developmentMongoHost = "mongodb://dev-uni.cloudwalker.tv:6592"
+	developmentMongoHost   = "mongodb://192.168.1.9:27017"
+	//developmentMongoHost   = "mongodb://dev-uni.cloudwalker.tv:6592"
 	schedularMongoHost = "mongodb://localhost:27017"
 	schedularRedisHost = ":6379"
 )
@@ -125,7 +127,7 @@ func startRESTServer(address, grpcAddress string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(credMatcher))
+	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher), runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName:false, EnumsAsInts:true, EmitDefaults:true}) )
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}  // Register ping
 	err := pb.RegisterDetailPageServiceHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
@@ -151,6 +153,19 @@ func getMongoCollection(dbName, collectionName, mongoHost string )  *mongo.Colle
 		log.Fatal(err)
 	}
 	return mongoClient.Database(dbName).Collection(collectionName)
+}
+
+func getRedisClient(redisHost string) *redis.Client {
+	client := redis.NewClient(&redis.Options{
+		Addr:     redisHost,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	_, err := client.Ping().Result()
+	if err != nil {
+		log.Fatalf("Could not connect to redis %v", err)
+	}
+	return client
 }
 
 func main()  {
@@ -182,6 +197,7 @@ func main()  {
 
 func initializeProcess() apihandler.Server  {
 	tileCollection := getMongoCollection("cwtx2devel", "tiles", developmentMongoHost);
-	return apihandler.Server{TileCollection:tileCollection}
+	return apihandler.Server{TileCollection:tileCollection, RedisConnection: getRedisClient(":6379"),
+	}
 }
 
