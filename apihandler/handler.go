@@ -16,31 +16,29 @@ import (
 	"time"
 )
 
-
-
 type movieTile struct {
 	Posters struct {
-		Landscape        []string      `json:"landscape"`
-		Portrait         []string      `json:"portrait"`
-		Backdrop         []string      `json:"backdrop"`
+		Landscape []string `json:"landscape"`
+		Portrait  []string `json:"portrait"`
+		Backdrop  []string `json:"backdrop"`
 	} `json:"posters"`
 	Content struct {
-		Source       string   `json:"source"`
-		DetailPage 	 bool	  `json:"detailPage"`
-		Package      string   `json:"package"`
-		Target       []string `json:"target"`
+		Source     string   `json:"source"`
+		DetailPage bool     `json:"detailPage"`
+		Package    string   `json:"package"`
+		Target     []string `json:"target"`
 	} `json:"content"`
 	Metadata struct {
-		Title           string      `json:"title"`
-		Synopsis        string      `json:"synopsis"`
-		Rating          float64         `json:"rating"`
-		Runtime         string      `json:"runtime"`
-		Year            string      `json:"year"`
-		Cast            []string    `json:"cast"`
-		Directors       []string    `json:"directors"`
-		Genre           []string    `json:"genre"`
-		Categories      []string    `json:"categories"`
-		Languages       []string    `json:"languages"`
+		Title      string   `json:"title"`
+		Synopsis   string   `json:"synopsis"`
+		Rating     float64  `json:"rating"`
+		Runtime    string   `json:"runtime"`
+		Year       string   `json:"year"`
+		Cast       []string `json:"cast"`
+		Directors  []string `json:"directors"`
+		Genre      []string `json:"genre"`
+		Categories []string `json:"categories"`
+		Languages  []string `json:"languages"`
 	} `json:"metadata"`
 	Buttons []struct {
 		Title       string `json:"title"`
@@ -50,19 +48,17 @@ type movieTile struct {
 	} `json:"buttons"`
 }
 
-
 type Server struct {
-	TileCollection *mongo.Collection
+	TileCollection  *mongo.Collection
 	RedisConnection *redis.Client
 }
 
-func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest) (*pb.DetailTileInfo, error){
+func (s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest) (*pb.DetailTileInfo, error) {
 
 	log.Println("Detail hit ")
 	detailKey := fmt.Sprintf("%s:detail", tileInfo.GetTileId())
 
 	var detailTileInfo pb.DetailTileInfo
-
 
 	if s.RedisConnection.Exists(detailKey).Val() == 1 {
 		log.Println("From cache")
@@ -79,7 +75,7 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 			break
 		}
 		return &detailTileInfo, nil
-	}else {
+	} else {
 		log.Println("From DB ")
 		findFilter := bson.D{{"ref_id", tileInfo.TileId}}
 		findResult := s.TileCollection.FindOne(ctx, findFilter)
@@ -103,9 +99,7 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 		// creating pipes for mongo aggregation
 		myStages := mongo.Pipeline{}
 
-
-		myStages = append(myStages,bson.D{{"$match", bson.D{{"ref_id", bson.D{{"$ne", tileInfo.GetTileId()}}}}}},)
-
+		myStages = append(myStages, bson.D{{"$match", bson.D{{"ref_id", bson.D{{"$ne", tileInfo.GetTileId()}}}}}}, )
 
 		// fetching related content
 		//myStages = append(myStages , bson.D{{"$match", bson.D{{"content.publishState", true}}}})
@@ -124,8 +118,7 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 			myStages = append(myStages, bson.D{{"$match", bson.D{{"metadata.languages", bson.D{{"$in", tile.Metadata.Languages}}}}}})
 		}
 
-
-		if len(tile.Metadata.Runtime) > 0  {
+		if len(tile.Metadata.Runtime) > 0 {
 			metaSet["runtime"] = tile.Metadata.Runtime
 		}
 		if len(tile.Metadata.Year) > 0 {
@@ -138,17 +131,19 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 			metaSet["source"] = tile.Content.Source
 		}
 
-		if(len(tile.Metadata.Cast) > 0){
+		if len(tile.Metadata.Cast) > 0 {
 			metaSet["cast"] = strings.Join(tile.Metadata.Cast, ",")
 		}
 
-		if(len(tile.Metadata.Directors) > 0){
+		if len(tile.Metadata.Directors) > 0 {
 			metaSet["director"] = strings.Join(tile.Metadata.Directors, ",")
 		}
 
 		detailTileInfo.Metadata = metaSet
 		detailTileInfo.Synopsis = tile.Metadata.Synopsis
 		detailTileInfo.Target = tile.Content.Target
+		detailTileInfo.Package = tile.Content.Package
+		detailTileInfo.MarketDeepLink = []string{fmt.Sprintf("market://%s", tile.Content.Package), fmt.Sprintf("cwmarket://%s", tile.Content.Package), fmt.Sprintf("appstore://%s", tile.Content.Package)}
 
 		var buttons []*pb.Button
 		for _, v := range tile.Buttons {
@@ -161,9 +156,9 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 		}
 		detailTileInfo.Button = buttons
 
-		myStages = append(myStages,bson.D{{"$sort", bson.D{{"created_at", -1}, {"updated_at", -1}, {"metadata.year", -1}}}},)
+		myStages = append(myStages, bson.D{{"$sort", bson.D{{"created_at", -1}, {"updated_at", -1}, {"metadata.year", -1}}}}, )
 
-		myStages = append(myStages,bson.D{{"$limit", 15}})
+		myStages = append(myStages, bson.D{{"$limit", 15}})
 
 		myStages = append(myStages, bson.D{{"$project", bson.D{
 			{"_id", 0},
@@ -176,7 +171,7 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 			{"content.target", 1},
 			{"created_at", 1},
 			{"content.detailPage", 1},
-			{"metadata.releaseDate", 1}}}} )
+			{"metadata.releaseDate", 1}}}})
 
 		// creating aggregation query
 		cur, err := s.TileCollection.Aggregate(ctx, myStages)
@@ -192,7 +187,7 @@ func(s *Server) GetDetailInfo(ctx context.Context, tileInfo *pb.TileInfoRequest)
 			// converting curors to movieTiles
 			err := cur.Decode(&mTile)
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
 
 			var contentTile pb.ContentTile

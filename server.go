@@ -34,8 +34,8 @@ const (
 
 const (
 	defaultHost = "mongodb://nayan:tlwn722n@cluster0-shard-00-00-8aov2.mongodb.net:27017,cluster0-shard-00-01-8aov2.mongodb.net:27017,cluster0-shard-00-02-8aov2.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true&w=majority"
-	developmentMongoHost   = "mongodb://192.168.1.9:27017"
-	//developmentMongoHost   = "mongodb://dev-uni.cloudwalker.tv:6592"
+	//developmentMongoHost   = "mongodb://192.168.1.9:27017"
+	developmentMongoHost   = "mongodb://dev-uni.cloudwalker.tv:6592"
 	schedularMongoHost = "mongodb://localhost:27017"
 	schedularRedisHost = ":6379"
 )
@@ -171,8 +171,8 @@ func getRedisClient(redisHost string) *redis.Client {
 func main()  {
 	serverhandler := initializeProcess();
 
-	grpcAddress := fmt.Sprintf(":%d",  7767)
-	restAddress := fmt.Sprintf(":%d", 7768)
+	grpcAddress := fmt.Sprintf(":%d",  6766)
+	restAddress := fmt.Sprintf(":%d", 6866)
 
 
 	// fire the gRPC server in a goroutine

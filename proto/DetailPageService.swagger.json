@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "DetailPageService.proto",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "consumes": [
     "application/json"
@@ -132,6 +132,15 @@
           "type": "string"
         },
         "target": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "package": {
+          "type": "string"
+        },
+        "marketDeepLink": {
           "type": "array",
           "items": {
             "type": "string"
