@@ -29,7 +29,7 @@ type InterResult struct {
 	Directors   []string `json:"directors"`
 	Cast        []string `json:"cast"`
 	Releasedate string   `json:"releasedate"`
-	Rating      int      `json:"rating"`
+	Rating      float64      `json:"rating"`
 	Runtime     string   `json:"runtime"`
 	Backdrop    []string `json:"backdrop"`
 	Portrait    []string `json:"portrait"`
