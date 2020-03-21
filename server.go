@@ -8,8 +8,8 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/joho/godotenv"
 	pbAuth "github.com/transavro/AuthService/proto"
-	"github.com/transavro/DetialService/apihandler"
-	pb "github.com/transavro/DetialService/proto"
+	"github.com/transavro/DetailService/apihandler"
+	pb "github.com/transavro/DetailService/proto"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
@@ -25,10 +25,11 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 )
 
-var mongoDbHost, redisPort, grpcPort, restPort  string
+var mongoDbHost, redisPort, grpcPort, restPort string
 
 type nullawareStrDecoder struct{}
 
@@ -63,16 +64,16 @@ func unaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return handler(ctx, req)
 }
 
-func checkingJWTToken(ctx context.Context) error{
+func checkingJWTToken(ctx context.Context) error {
 	meta, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return status.Error(codes.NotFound, fmt.Sprintf("no auth meta-data found in request" ))
+		return status.Error(codes.NotFound, fmt.Sprintf("no auth meta-data found in request"))
 	}
 
 	token := meta["token"]
 
 	if len(token) == 0 {
-		return  status.Error(codes.NotFound, fmt.Sprintf("Token not found" ))
+		return status.Error(codes.NotFound, fmt.Sprintf("Token not found"))
 	}
 
 	// calling auth service
@@ -88,8 +89,8 @@ func checkingJWTToken(ctx context.Context) error{
 		Token: token[0],
 	})
 	if err != nil {
-		return  status.Error(codes.NotFound, fmt.Sprintf("Invalid token:  %s ", err ))
-	}else {
+		return status.Error(codes.NotFound, fmt.Sprintf("Invalid token:  %s ", err))
+	} else {
 		return nil
 	}
 }
@@ -103,12 +104,12 @@ func streamIntercept(server interface{}, stream grpc.ServerStream, info *grpc.St
 	return handler(server, stream)
 }
 
-func startGRPCServer(address string, server apihandler.Server) error {
+func startGRPCServer(address string, server apihandler.Executor) error {
 	// create a listener on TCP port
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
-	}  // create a server instance
+	} // create a server instance
 	if err != nil {
 		return err
 	}
@@ -118,7 +119,7 @@ func startGRPCServer(address string, server apihandler.Server) error {
 	//grpcServer := grpc.NewServer(serverOptions...)
 	grpcServer := grpc.NewServer()
 	// attach the Ping service to the server
-	pb.RegisterDetailPageServiceServer(grpcServer, &server)  // start the server
+	pb.RegisterDetailPageServiceServer(grpcServer, &server) // start the server
 	//log.Printf("starting HTTP/2 gRPC server on %s", address)
 	if err := grpcServer.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %s", err)
@@ -130,7 +131,7 @@ func startRESTServer(address, grpcAddress string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher), runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName:false, EnumsAsInts:true, EmitDefaults:true}))
+	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(runtime.DefaultHeaderMatcher), runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName: false, EnumsAsInts: true, EmitDefaults: true}))
 
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
@@ -145,13 +146,12 @@ func startRESTServer(address, grpcAddress string) error {
 	return nil
 }
 
-func getMongoCollection(dbName, collectionName, mongoHost string )  *mongo.Collection {
-
+func getMongoCollection(dbName, collectionName, mongoHost string) *mongo.Collection {
 	// Register custom codecs for protobuf Timestamp and wrapper types
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	mongoClient, err :=  mongo.Connect(ctx, options.Client().ApplyURI(mongoHost), options.Client().SetRegistry(bson.NewRegistryBuilder().
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoHost), options.Client().SetRegistry(bson.NewRegistryBuilder().
 		RegisterDecoder(reflect.TypeOf(""), nullawareStrDecoder{}).
-		Build(),))
+		Build(), ))
 
 	if err != nil {
 		log.Println("Error while making collection obj ")
@@ -160,8 +160,7 @@ func getMongoCollection(dbName, collectionName, mongoHost string )  *mongo.Colle
 	return mongoClient.Database(dbName).Collection(collectionName)
 }
 
-
-func main()  {
+func main() {
 	serverhandler := initializeProcess()
 
 	// fire the gRPC server in a goroutine
@@ -183,16 +182,14 @@ func main()  {
 	select {}
 }
 
-
-func loadEnv(){
+func loadEnv() {
 	mongoDbHost = os.Getenv("MONGO_HOST")
 	redisPort = os.Getenv("REDIS_PORT")
 	grpcPort = os.Getenv("GRPC_PORT")
 	restPort = os.Getenv("REST_PORT")
 }
 
-
-func initializeProcess() apihandler.Server  {
+func initializeProcess() apihandler.Executor {
 	err := godotenv.Load()
 	if err != nil {
 		log.Println(err.Error())
@@ -200,12 +197,12 @@ func initializeProcess() apihandler.Server  {
 	loadEnv()
 
 	tileCollection := getMongoCollection("transavro", "optimus_content", mongoDbHost)
-	return apihandler.Server{
-		TileCollection:tileCollection,
-		RedisClient:getRedisClient(redisPort),
+	return apihandler.Executor{
+		tileCollection,
+		getRedisClient(redisPort),
+			new(sync.WaitGroup),
 	}
 }
-
 
 func getRedisClient(redisHost string) *redis.Client {
 	client := redis.NewClient(&redis.Options{
@@ -218,12 +215,4 @@ func getRedisClient(redisHost string) *redis.Client {
 		log.Fatalf("Could not connect to redis %v", err)
 	}
 	return client
-}
-
-func makingServiceConnection(tragetServicePort string) (*grpc.ClientConn, error){
-	conn , err := grpc.Dial(tragetServicePort, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %s", err)
-	}
-	return conn, err
 }

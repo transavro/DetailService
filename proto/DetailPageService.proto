@@ -31,14 +31,14 @@ message DetailTileInfo{
 }
 
 enum ButtonType{
-    LocalApi = 0;
-    RemotApi = 1;
+    RemotApi = 0; // it is default if you send or dont set it.
+    LocalApi = 1;
 }
 
 message Button {
     string title = 1;
     string icon = 2;
     string package = 3;
-    string action = 4;
+    string target = 4;
     ButtonType buttonType = 6;
 }
