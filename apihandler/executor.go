@@ -29,7 +29,7 @@ type InterResult struct {
 	Directors   []string `json:"directors"`
 	Cast        []string `json:"cast"`
 	Releasedate string   `json:"releasedate"`
-	Rating      float64      `json:"rating"`
+	Rating      float64  `json:"rating"`
 	Runtime     string   `json:"runtime"`
 	Backdrop    []string `json:"backdrop"`
 	Portrait    []string `json:"portrait"`
@@ -54,18 +54,22 @@ func (e *Executor) GetDetailInfo(ctx context.Context, req *pb.TileInfoRequest) (
 	result := new(pb.DetailTileInfo)
 
 	targetRedisKey := fmt.Sprintf("%s:detail", req.GetTileId())
-	if e.Exists(targetRedisKey).Val() == 1 {
-		redis_result, err := e.SMembers(targetRedisKey).Result()
-		if err != nil {
-			return nil, status.Error(codes.Unavailable, fmt.Sprintf("Failed to get Result from Cache ", err))
-		}
-		//Important lesson, challenge was to convert interface{} to byte. used  ([]byte(k.(string)))
-		err = proto.Unmarshal([]byte(redis_result[0]), result)
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to unMarshal result ", err))
-		}
-		return result, nil
-	} else {
+	//if e.Exists(targetRedisKey).Val() == 1 {
+	//	redis_result, err := e.SMembers(targetRedisKey).Result()
+	//	if err != nil {
+	//		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Failed to get Result from Cache ", err))
+	//	}
+	//	//Important lesson, challenge was to convert interface{} to byte. used  ([]byte(k.(string)))
+	//	err = proto.Unmarshal([]byte(redis_result[0]), result)
+	//	if err != nil {
+	//		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to unMarshal result ", err))
+	//	}
+	//	return result, nil
+	//} else
+
+	{
+
+
 		resultCur, err := e.Collection.Aggregate(ctx, makePL(req.GetTileId()))
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -145,19 +149,21 @@ func makeDetailInfo(result *pb.DetailTileInfo, interResult *InterResult, wg *syn
 }
 
 func makeSuggestion(result *pb.DetailTileInfo, interResult *InterResult, collection *mongo.Collection, id string, ctx context.Context, wg *sync.WaitGroup) {
+	start := time.Now()
 	cur, err := collection.Aggregate(context.Background(), makeSugPL(interResult, id))
+	log.Println("pure mongo suggestion timing ==>",time.Since(start))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 	defer cur.Close(ctx)
 	var relatedTiles []*pbSch.Content
+	content := new(pbSch.Content)
 	for cur.Next(context.Background()) {
-		var content pbSch.Content
-		err = cur.Decode(&content)
+		err = cur.Decode(content)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
-		relatedTiles = append(relatedTiles, &content)
+		relatedTiles = append(relatedTiles, content)
 	}
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(relatedTiles), func(i, j int) { relatedTiles[i], relatedTiles[j] = relatedTiles[j], relatedTiles[i] })
@@ -195,10 +201,6 @@ func makePL(id string) mongo.Pipeline {
 func makeSugPL(temp *InterResult, targetId string) mongo.Pipeline {
 	// creating pipes for mongo aggregation for recommedation
 	stages := mongo.Pipeline{}
-	stages = append(stages, bson.D{{"$lookup", bson.M{"from": "optimus_monetize", "localField": "refid", "foreignField": "refid", "as": "play"}}})
-	stages = append(stages, bson.D{{"$unwind", "$play"}})
-	stages = append(stages, bson.D{{"$match", bson.M{"refid": bson.M{"$ne": targetId}}}})
-	stages = append(stages, bson.D{{"$match", bson.D{{"content.publishstate", true}}}})
 	if len(temp.Categories) > 0 {
 		stages = append(stages, bson.D{{"$match", bson.M{"metadata.categories": bson.M{"$in": temp.Categories}}}})
 	}
@@ -208,35 +210,20 @@ func makeSugPL(temp *InterResult, targetId string) mongo.Pipeline {
 	if len(temp.Languages) > 0 {
 		stages = append(stages, bson.D{{"$match", bson.M{"metadata.languages": bson.M{"$in": temp.Languages}}}})
 	}
+	stages = append(stages, bson.D{{"$match", bson.M{"$and": bson.A{bson.M{"refid": bson.M{"$ne": targetId}}, bson.M{"content.publishstate": bson.M{"$ne":false}}}}}})
 	stages = append(stages, bson.D{{"$limit", 15}})
-
-	stages = append(stages, bson.D{{"$group", bson.M{"_id": bson.M{
-		"releaseDate": "$metadata.releasedate",
-		"year":        "$metadata.year",
-	}, "contentTile": bson.M{"$push": bson.M{
+	stages = append(stages, bson.D{{"$lookup", bson.M{"from": "optimus_monetize", "localField": "refid", "foreignField": "refid", "as": "play"}}})
+	stages = append(stages, bson.D{{"$replaceRoot", bson.M{"newRoot": bson.M{"$mergeObjects": bson.A{bson.M{"$arrayElemAt": bson.A{"$play", 0}}, "$$ROOT"}}}}}) //adding stage 3  ==> https://docs.mongodb.com/manual/reference/operator/aggregation/mergeObjects/#exp._S_mergeObjects
+	stages = append(stages, bson.D{{"$project", bson.M{"play": 0}}})
+	stages = append(stages, bson.D{{"$project", bson.M{"_id": 0,
 		"title":        "$metadata.title",
-		"portrait":     "$media.portrait",
 		"poster":       "$media.landscape",
+		"portriat":     "$media.portrait",
 		"video":        "$media.video",
-		"contentId":    "$refid",
-		"isDetailPage": "$content.detailpage",
 		"type":         "$tiletype",
-		"play":         "$play.contentavailable",
-	}}}}})
-
-	stages = append(stages, bson.D{{"$unwind", "$contentTile"}})
-	stages = append(stages, bson.D{{"$limit", 15}})
-	stages = append(stages, bson.D{{"$project", bson.M{
-		"_id":          0,
-		"title":        "$contentTile.title",
-		"poster":       "$contentTile.poster",
-		"portriat":     "$contentTile.portrait",
-		"type":         "$contentTile.type",
-		"isDetailPage": "$contentTile.isDetailPage",
-		"contentId":    "$contentTile.contentId",
-		"play":         "$contentTile.play",
-		"video":        "$contentTile.video",
+		"isDetailPage": "$content.detailpage",
+		"contentId":    "$refid",
+		"play":         "$contentavailable",
 	}}})
-
 	return stages
 }
