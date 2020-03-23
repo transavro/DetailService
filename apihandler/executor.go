@@ -54,22 +54,18 @@ func (e *Executor) GetDetailInfo(ctx context.Context, req *pb.TileInfoRequest) (
 	result := new(pb.DetailTileInfo)
 
 	targetRedisKey := fmt.Sprintf("%s:detail", req.GetTileId())
-	//if e.Exists(targetRedisKey).Val() == 1 {
-	//	redis_result, err := e.SMembers(targetRedisKey).Result()
-	//	if err != nil {
-	//		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Failed to get Result from Cache ", err))
-	//	}
-	//	//Important lesson, challenge was to convert interface{} to byte. used  ([]byte(k.(string)))
-	//	err = proto.Unmarshal([]byte(redis_result[0]), result)
-	//	if err != nil {
-	//		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to unMarshal result ", err))
-	//	}
-	//	return result, nil
-	//} else
-
-	{
-
-
+	if e.Exists(targetRedisKey).Val() == 1 {
+		redis_result, err := e.SMembers(targetRedisKey).Result()
+		if err != nil {
+			return nil, status.Error(codes.Unavailable, fmt.Sprintf("Failed to get Result from Cache ", err))
+		}
+		//Important lesson, challenge was to convert interface{} to byte. used  ([]byte(k.(string)))
+		err = proto.Unmarshal([]byte(redis_result[0]), result)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to unMarshal result ", err))
+		}
+		return result, nil
+	} else {
 		resultCur, err := e.Collection.Aggregate(ctx, makePL(req.GetTileId()))
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
